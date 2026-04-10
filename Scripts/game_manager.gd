@@ -14,11 +14,12 @@ var my_deck: Array[Card]
 var last_deck: Array[Card]
 var last_bath: Array[Card]
 var last_win: int = 0
-
 var wins_p1: int = 0
 var wins_p2: int = 0
 
 var counter: int = 0
+var curr_run_data: RunData
+var run_data: Array[RunData]
 
 func _ready() -> void:
 	create_all_cards()
@@ -31,6 +32,8 @@ func _process(_delta: float) -> void:
 	if counter == 0: last_deck = my_deck.duplicate()
 	if counter != 0 : switch_a_card()
 	
+	curr_run_data = RunData.new()
+	
 	for j in range(250):
 		start_game()
 	one_start = !one_start
@@ -39,6 +42,7 @@ func _process(_delta: float) -> void:
 	one_start = !one_start
 	
 	save_deck_or_back()
+	save_run_data()
 	print_result()
 	wins_p1 = 0
 	wins_p2 = 0
@@ -128,6 +132,7 @@ func start_game() -> void:
 	initiate_players()
 	while(not is_game_finished()):
 		play_turn()
+	save_game_data()
 	reset_cards()
 
 func reset_cards() -> void:
@@ -169,6 +174,8 @@ func is_game_finished() -> bool:
 		if player2.life <= 0:
 			wins_p1 += 1
 			has_winner_been_announced = true
+			if one_start: curr_run_data.won_P1_first += 1
+			else: curr_run_data.won_P1_second += 1
 	return player1.life <= 0 or player2.life <= 0
 
 
@@ -182,6 +189,16 @@ func export_txt_optimized_deck() -> void:
 		result += card.name + "\n"
 	var file := FileAccess.open("res://ydris_deck.txt", FileAccess.WRITE)
 	file.store_string(result)
+
+
+func save_game_data():
+	if one_start: curr_run_data.turns_per_game_first.push_back(turn)
+	else: curr_run_data.turns_per_game_second.push_back(turn)
+
+
+func save_run_data():
+	pass
+
 
 #########################################
 
@@ -288,3 +305,21 @@ class Player:
 	func reset_cards_life():
 		for card: Card in field : card.current_def = card.defense
 		for card: Card in opponent.field : card.current_def = card.defense
+
+
+#########################################
+
+
+class RunData:
+	extends RefCounted
+	var turns_per_game_first: Array[int]
+	var turns_per_game_second: Array[int]
+	var won_P1_first: int
+	var won_P1_second: int
+	var saved_deck: Array[Card]
+	var attack_average: float
+	var defense_average: float
+	var cost_average: float
+	var n_gard: int
+	var n_fly: int
+	var n_charge: int
