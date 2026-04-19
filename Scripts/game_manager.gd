@@ -18,6 +18,7 @@ var wins_p1: int = 0
 var wins_p2: int = 0
 
 var counter: int = 0
+var data_counter: int = 100
 var curr_run_data: RunData
 var run_data: Array[RunData]
 
@@ -42,15 +43,20 @@ func _process(_delta: float) -> void:
 	one_start = !one_start
 	
 	save_deck_or_back()
-	save_run_data()
 	print_result()
 	wins_p1 = 0
 	wins_p2 = 0
 	counter += 1
 	
-	if counter >= 10000:
+	data_counter += 1
+	if data_counter >= 100:
+		save_run_data()
+		data_counter = 0
+	
+	if counter >= 2000:
+		save_run_data()
 		export_txt_optimized_deck()
-		print("FINITO")
+		print_data_results()
 		get_tree().quit()
 
 
@@ -132,7 +138,7 @@ func start_game() -> void:
 	initiate_players()
 	while(not is_game_finished()):
 		play_turn()
-	save_game_data()
+	curr_run_data.turns_per_game.push_back(turn)
 	reset_cards()
 
 func reset_cards() -> void:
@@ -191,13 +197,93 @@ func export_txt_optimized_deck() -> void:
 	file.store_string(result)
 
 
-func save_game_data():
-	if one_start: curr_run_data.turns_per_game_first.push_back(turn)
-	else: curr_run_data.turns_per_game_second.push_back(turn)
-
-
 func save_run_data():
-	pass
+	curr_run_data.won_P1_first /= 2.5
+	curr_run_data.won_P1_second /= 2.5
+	for card: Card in my_deck:
+		curr_run_data.saved_deck.push_back(card)
+		curr_run_data.attack_average += card.attack
+		curr_run_data.defense_average += card.defense
+		curr_run_data.cost_average += card.cost
+		if card.is_guard : curr_run_data.n_gard += 1
+		if card.is_fly : curr_run_data.n_fly += 1
+		if card.is_charge : curr_run_data.n_charge += 1
+	curr_run_data.attack_average /= my_deck.size()
+	curr_run_data.defense_average /= my_deck.size()
+	curr_run_data.cost_average /= my_deck.size()
+	run_data.push_back(curr_run_data)
+
+
+func print_data_results():
+	var c = 0
+	
+	print("=================== \n Turns_per_game \n===================")
+	c = 0
+	for data: RunData in run_data:
+		var sum: float = 0
+		for n: int in data.turns_per_game:
+			sum += n
+		sum /= 500.0
+		print ("Run ", c, " : ", sum)
+		c += 100
+	
+	print("=================== \n Win first \n===================")
+	c = 0
+	for data: RunData in run_data:
+		print ("Run ", c, " : ", data.won_P1_first, " %")
+		c += 100
+	
+	print("=================== \n Win second \n===================")
+	c = 0
+	for data: RunData in run_data:
+		print ("Run ", c, " : ", data.won_P1_second, " %")
+		c += 100
+	
+	print("=================== \n Deck \n===================")
+	c = 0
+	for data: RunData in run_data:
+		print ("--------------------")
+		print("Run : ", c)
+		for card: Card in data.saved_deck:
+			print(card.name)
+		c += 100
+		print ("--------------------")
+	
+	print("=================== \n Attack \n===================")
+	c = 0
+	for data: RunData in run_data:
+		print ("Run ", c, " : ", data.attack_average)
+		c += 100
+		
+	print("=================== \n Defense \n===================")
+	c = 0
+	for data: RunData in run_data:
+		print ("Run ", c, " : ", data.defense_average)
+		c += 100
+		
+	print("=================== \n Cost \n===================")
+	c = 0
+	for data: RunData in run_data:
+		print ("Run ", c, " : ", data.cost_average)
+		c += 100
+		
+	print("=================== \n Guard \n===================")
+	c = 0
+	for data: RunData in run_data:
+		print ("Run ", c, " : ", data.n_gard)
+		c += 100
+		
+	print("=================== \n Fly \n===================")
+	c = 0
+	for data: RunData in run_data:
+		print ("Run ", c, " : ", data.n_fly)
+		c += 100
+		
+	print("=================== \n Charge \n===================")
+	c = 0
+	for data: RunData in run_data:
+		print ("Run ", c, " : ", data.n_charge)
+		c += 100
 
 
 #########################################
@@ -312,10 +398,9 @@ class Player:
 
 class RunData:
 	extends RefCounted
-	var turns_per_game_first: Array[int]
-	var turns_per_game_second: Array[int]
-	var won_P1_first: int
-	var won_P1_second: int
+	var turns_per_game: Array[int]
+	var won_P1_first: float
+	var won_P1_second: float
 	var saved_deck: Array[Card]
 	var attack_average: float
 	var defense_average: float
